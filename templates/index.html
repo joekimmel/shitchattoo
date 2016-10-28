@@ -88,7 +88,12 @@
         My Name is: <input type="text" name="name_field" id="name_field">
       </form>
 
-      <div id="chat_window"></div>
+      <div id="chat_window">
+        {% for msg in messages %}
+        <br>
+        <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
+        {% endfor %}
+      </div>
 
     <form id="broadcast" method="POST" action='javascript:void(0)'>
       <input type="text" name="broadcast_data" id="broadcast_data">
