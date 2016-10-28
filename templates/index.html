@@ -1,0 +1,98 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Welcome to TrueChat, can I take your order?</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+      $(document).ready(function() {
+          // single namespace for now
+          namespace = '/trd';
+          var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+
+          socket.on('connect', function() {
+              socket.emit('trd_connect_event', {data: 'connected!'});
+          });
+
+          socket.on('chat_message', function(msg) {
+              var element = $('#chat_window');
+              element.append('<br> <span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
+              element.animate({scrollTop: element[0].scrollHeight}, 500);
+          });
+
+
+         // emit handler(s)
+         $('form#broadcast').submit(function(event) {
+             socket.emit('trd_broadcast_event',
+                 {msg: $('#broadcast_data').val(),
+                  sender: $('#name_field').val()});
+             $('#broadcast_data').val('');
+             return false;
+          });
+
+      });
+      </script>
+    <style>
+
+      html
+      {
+        margin: 10px;
+      }
+
+      form
+      {
+        padding: 5px;
+      }
+
+      span.name
+      {
+        color: cadetblue;
+      }
+
+      #ui_container
+      {
+        width: 80%;
+      }
+
+      input#name_field
+      {
+        width: 150px;
+      }
+
+      input#broadcast_data
+      {
+        width: 100%;
+      }
+
+      #chat_window
+      {
+        display: block;
+        border-color: lightblue;
+        border-width: 2px;
+        border-style: groove;
+        border-radius: 20px;
+        background: #eeeeee;
+        padding: 22px;
+        overflow-y: scroll;
+        overflow-x: auto;
+        width: 100%;
+        height: 100px;
+      }
+    </style>
+    </head>
+<body>
+  <html>
+    <h1>Get Chatty</h1>
+    <div id="ui_container">
+      <form id="name" method="POST" action='javascript:void(0)'>
+        My Name is: <input type="text" name="name_field" id="name_field">
+      </form>
+
+      <div id="chat_window"></div>
+
+    <form id="broadcast" method="POST" action='javascript:void(0)'>
+      <input type="text" name="broadcast_data" id="broadcast_data">
+      <input type="submit" value="Broadcast">
+    </form>
+  </html>
+</body>
