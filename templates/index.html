@@ -5,14 +5,21 @@
     <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
     <script type="text/javascript" charset="utf-8">
+
+      var nameChangeHandler;
+
       $(document).ready(function() {
           // single namespace for now
-          namespace = '/trd';
+          var namespace = '/trd';
+         var my_id;
+          my_id = {{ client_id }};
           var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
 
           socket.on('connect', function() {
               socket.emit('trd_connect_event', {data: 'connected!'});
           });
+
+         //////// incoming messages
 
           socket.on('chat_message', function(msg) {
               var element = $('#chat_window');
@@ -20,6 +27,20 @@
               element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
+          socket.on('names_message', function(msg) {
+              var element = $('div#user_list');
+              element.empty();
+              for(client_id in msg) {
+                  element.append('<br><span class=\"name\">' + msg[client_id]['name'] + '</span>');
+              }
+             element.animate({scrollTop: element[0].scrollHeight}, 500);
+          });
+
+
+          ////////// outgoing messages
+      nameChangeHandler = function(val) {
+          socket.emit('trd_name_change_event', {id: my_id, name: val});
+      }
 
          // emit handler(s)
          $('form#broadcast').submit(function(event) {
@@ -29,6 +50,10 @@
              $('#broadcast_data').val('');
              return false;
           });
+
+          // scroll the names list to the bottom to start with
+          var element = $('div#user_list');
+          element.animate({scrollTop: element[0].scrollHeight}, 500);
 
       });
       </script>
@@ -49,9 +74,39 @@
         color: cadetblue;
       }
 
+      .flex_parent
+      {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+      }
+
+      div.vertical_scroller
+      {
+        overflow-y: scroll;
+        overflow-x: auto;
+        border-color: lightblue;
+        border-width: 2px;
+        border-style: groove;
+        border-radius: 20px;
+        background: #eeeeee;
+        padding: 22px;
+        height: 100px;
+      }
+
       #ui_container
       {
-        width: 80%;
+        width: 70%;
+      }
+
+      #user_list_container
+      {
+        margin: 10px;
+      }
+
+      #user_list
+      {
+
       }
 
       input#name_field
@@ -61,43 +116,45 @@
 
       input#broadcast_data
       {
-        width: 100%;
+        width: 90%;
       }
 
       #chat_window
       {
         display: block;
-        border-color: lightblue;
-        border-width: 2px;
-        border-style: groove;
-        border-radius: 20px;
-        background: #eeeeee;
-        padding: 22px;
-        overflow-y: scroll;
-        overflow-x: auto;
-        width: 100%;
-        height: 100px;
       }
     </style>
     </head>
 <body>
-  <html>
-    <h1>Get Chatty</h1>
+  <h1>Get Chatty</h1>
+  <div class="flex_parent">
     <div id="ui_container">
-      <form id="name" method="POST" action='javascript:void(0)'>
-        My Name is: <input type="text" name="name_field" id="name_field">
+      <form id="name" method="POST" action="javascript:void(0)">
+        My Name is: <input type="text" name="name_field" id="name_field" onchange="nameChangeHandler(this.value)">
       </form>
 
-      <div id="chat_window">
+      <div id="chat_window" class="vertical_scroller">
         {% for msg in messages %}
         <br>
         <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
         {% endfor %}
       </div>
 
-    <form id="broadcast" method="POST" action='javascript:void(0)'>
-      <input type="text" name="broadcast_data" id="broadcast_data">
-      <input type="submit" value="Broadcast">
-    </form>
-  </html>
+      <form id="broadcast" method="POST" action="javascript:void(0)">
+        <input type="text" name="broadcast_data" id="broadcast_data">
+        <input type="submit" value="Broadcast">
+      </form>
+    </div> <!-- /ui_container -->
+    <div id="user_list_container">
+      All Users, Ever
+      <div id="user_list" class="vertical_scroller">
+        {% for client_id in users %}
+            <br><span class="name">
+              {{users[client_id]['name'] }}
+            </span>
+        {% endfor %}
+      </div>
+    </div> <!-- /user_list_container -->
+  </div> <!-- / flex_parent -->
 </body>
+</html>
