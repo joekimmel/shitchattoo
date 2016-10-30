@@ -1,7 +1,7 @@
 from collections import deque
 import random
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request, make_response
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
@@ -28,10 +28,17 @@ names = [ "anonymous",
 
 
 @app.route('/')
-def index():
-    app.client_counter += 1
-    print ("client_counter is now: %d " % app.client_counter)
-    return render_template('index.html', messages=messages, client_id = app.client_counter, users = app.client_names)
+def index():    
+    client_id = int(request.cookies.get('userID', "-1"))
+    if(client_id == -1):
+        app.client_counter += 1
+        client_id = app.client_counter
+        print ("client_counter is now: %d " % app.client_counter)
+
+    resp = make_response(
+        render_template('index.html', messages=messages, client_id = client_id, users = app.client_names))
+    resp.set_cookie('userID', str(client_id))
+    return resp
 
 @socketio.on('trd_connect_event', namespace='/trd')
 def connect_event(evt):
