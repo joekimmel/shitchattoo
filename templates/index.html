@@ -16,8 +16,17 @@
           var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
 
           socket.on('connect', function() {
-              socket.emit('trd_connect_event', {data: 'connected!'});
+              socket.emit('trd_connect_event', {client_id: my_id});
           });
+          socket.on('disconnect', function() {
+              socket.emit('trd_disconnect_event', {client_id: my_id})
+          });
+
+          window.onbeforeunload = function() {
+              socket.emit('trd_disconnect_event', {client_id: my_id})
+              socket.onclose = function () {}; // not sure why we have to disable the socket's close behavior?
+              socket.close();
+          };
 
          //////// incoming messages
 
@@ -39,14 +48,15 @@
 
           ////////// outgoing messages
       nameChangeHandler = function(val) {
-          socket.emit('trd_name_change_event', {id: my_id, name: val});
+          socket.emit('trd_name_change_event', {client_id: my_id, name: val});
       }
 
          // emit handler(s)
          $('form#broadcast').submit(function(event) {
              socket.emit('trd_broadcast_event',
                  {msg: $('#broadcast_data').val(),
-                  sender: $('#name_field').val()});
+                  sender: $('#name_field').val(),
+                  client_id: my_id});
              $('#broadcast_data').val('');
              return false;
           });
@@ -54,6 +64,10 @@
           // scroll the names list to the bottom to start with
           var element = $('div#user_list');
           element.animate({scrollTop: element[0].scrollHeight}, 500);
+
+          //scroll to the bottom of the chat as well.
+      var element = $('#chat_window');
+      element.animate({scrollTop: element[0].scrollHeight}, 500);
 
       });
       </script>
@@ -130,7 +144,7 @@
   <div class="flex_parent">
     <div id="ui_container">
       <form id="name" method="POST" action="javascript:void(0)">
-        My Name is: <input type="text" name="name_field" id="name_field" onchange="nameChangeHandler(this.value)">
+        My Name is: <input type="text" name="name_field" id="name_field" value="{{ users[client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
       </form>
 
       <div id="chat_window" class="vertical_scroller">
@@ -146,11 +160,11 @@
       </form>
     </div> <!-- /ui_container -->
     <div id="user_list_container">
-      All Users, Ever
+      Look Who's Talking
       <div id="user_list" class="vertical_scroller">
-        {% for client_id in users %}
+        {% for cli_id in users %}
             <br><span class="name">
-              {{users[client_id]['name'] }}
+              {{users[cli_id]['name'] }}
             </span>
         {% endfor %}
       </div>
