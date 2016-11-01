@@ -1,5 +1,7 @@
 from collections import deque
+from datetime import datetime, timedelta
 import random
+from threading import Timer
 
 from flask import Flask, render_template, request, make_response
 from flask_socketio import SocketIO, emit
@@ -28,8 +30,9 @@ names = [ "anonymous",
 client_counter = 0
 clients = {}
 name_to_client_id_map = {}
+thread = None
 
-#unclear why we have to do this so often -- clients doesn't persist cleanly ...
+#-- clients doesn't persist across server bounces...
 def make_new_client(client_id, room_id = ''):
     global clients
     global name_to_client_id_map
@@ -101,6 +104,9 @@ def index():
 @socketio.on('trd_connect_event', namespace='/trd')
 def connect_event(evt):
     global clients
+    global thread
+    if thread is None:
+        thread = socketio.start_background_task(target=periodic_broadcast)
 
     if(evt['client_id'] not in clients):
         print("for some reason we didn't already have the client_id?")
@@ -129,6 +135,9 @@ def disconnect_event(evt):
 
 
 def send_private_message(message):
+    global name_to_client_id_map
+    global clients
+
     username = ''
     pieces_in_name = 1
     pieces = message['msg'][1:].split()
@@ -148,6 +157,9 @@ def send_private_message(message):
         print("tried to send private message to {0} but they're not in the names map!".format(username))
 
 def send_message_all(message):
+    global messages
+    global clients
+
     sender = message['sender'] if len(message['sender']) > 0 else random.choice(names)
     ensure_client_counter(message['client_id'])
     outbound = {
@@ -169,6 +181,8 @@ def broadcast_message(message):
     global name_to_client_id_map
     global clients
 
+    clients[message['client_id']]['connected'] = True
+
     if(message['msg'][0] == '@'):
         send_private_message(message)
 
@@ -184,6 +198,7 @@ def name_change_message(message):
 
     del name_to_client_id_map[clients[message['client_id']]['name']]
     clients[message['client_id']]['name'] = message['name']
+    clients[message['client_id']]['connected'] = True
     name_to_client_id_map[message['name']] = message['client_id']
     
     print('client ' + str(message['client_id']) + ' is now named: ' + message['name'])
@@ -192,5 +207,17 @@ def name_change_message(message):
          broadcast=True)
 
 
+
+def periodic_broadcast():
+    while(True):
+        print( "\n\ttop of heartbeat")
+        outbound = {
+            'msg': "<i>server heartbeat</i>",
+            'sender': "server"}
+        socketio.emit('chat_message', outbound, namespace='/trd')
+        print("\tbottom of heartbeat\n")
+        socketio.sleep(10)
+
 if __name__ == '__main__':
+
     socketio.run(app, debug=True, host='0.0.0.0')
