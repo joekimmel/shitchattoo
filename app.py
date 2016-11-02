@@ -90,6 +90,7 @@ def index():
                         )
         )
     resp.set_cookie('userIDv2', str(client_id))
+    resp.set_cookie('userName', clients[client_id]['name'])
 
     # seems like getting all browsers to refresh the page on e.g. "back" takes a few settings.
     resp.headers['Cache-Control'] = "no-cache, no-store, must-revalidate"
@@ -176,6 +177,48 @@ def broadcast_message(message):
 
     else:
         send_message_all(message)
+
+@app.route('/name', methods=['POST'])
+def change_name():
+    global client_counter
+    global clients
+    global name_to_client_id_map
+    global socketio
+
+    #######TODO (this is mostly copypasta and needs to be DRY 'd)
+    client_id = int(request.cookies.get('userIDv2', "-1"))
+    if(client_id == -1):
+        client_counter += 1
+        client_id = client_counter
+        print ("client_counter is now: %d " % client_counter)
+
+    if (client_id not in clients):
+        make_new_client(client_id, '')
+
+    old_name = clients[client_id]['name']
+    clients[client_id]['name'] = request.json['name']
+    del name_to_client_id_map[old_name]
+    name_to_client_id_map[request.json['name']] = client_id
+
+    print('client ' + str(client_id) + ' is now named: ' + request.json['name'])
+    socketio.emit('names_message',
+         get_active_users(),
+         namespace='/trd')
+
+    #if they're reloading the page they may be marked as disconnected at this point
+    clients[client_id]['connected'] = True
+
+    resp = make_response("OK")
+    resp.set_cookie('userIDv2', str(client_id))
+    resp.set_cookie('userName', clients[client_id]['name'])
+
+    # seems like getting all browsers to refresh the page on e.g. "back" takes a few settings.
+    resp.headers['Cache-Control'] = "no-cache, no-store, must-revalidate"
+    resp.headers['Pragma'] = "no-cache"
+    resp.headers['Expires'] = 0
+
+    return resp
+
 
 @socketio.on('trd_name_change_event', namespace='/trd')
 def name_change_message(message):
