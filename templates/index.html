@@ -29,10 +29,17 @@
           };
 
          //////// incoming messages
+          var dateFormatter = new Intl.DateTimeFormat("en-US",
+           {month: "short",
+            day: "2-digit",
+            hour: "numeric",
+            minute: "numeric" });
 
           socket.on('chat_message', function(msg) {
               var element = $('#chat_window');
-              element.append('<br> <span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
+              element.append('<br> <span class=\"timestamp\">' +
+                dateFormatter.format(new Date(msg['timestamp'])) +
+                '</span>&nbsp;<span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
               element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
@@ -56,6 +63,7 @@
              socket.emit('trd_broadcast_event',
                  {msg: $('#broadcast_data').val(),
                   sender: $('#name_field').val(),
+                  timestamp: new Date().toString(),
                   client_id: my_id});
              $('#broadcast_data').val('');
              return false;
@@ -88,6 +96,12 @@
         color: cadetblue;
       }
 
+      span.timestamp
+      {
+        font-size: 70%;
+        color: #777;
+      }
+
       .flex_parent
       {
         display: flex;
@@ -104,7 +118,7 @@
         border-width: 2px;
         border-style: groove;
         border-radius: 20px;
-        background: #eeeeee;
+        background: #eee;
         padding: 22px;
         height: 100px;
       }
@@ -151,6 +165,7 @@
       <div id="chat_window" class="vertical_scroller">
         {% for msg in messages %}
         <br>
+            <span class="timestamp"> {{msg.timestamp}} </span> &nbsp;
         <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
         {% endfor %}
       </div>

@@ -140,6 +140,7 @@ def send_private_message(message):
         target_client = clients[name_to_client_id_map[username]]
         outbound = {
             'msg': "(PRIVATE) " + message['msg'],
+            'timestamp': message['timestamp'],
             'sender': sender}
         emit('chat_message',
                 outbound,
@@ -152,6 +153,7 @@ def send_message_all(message):
     ensure_client_counter(message['client_id'])
     outbound = {
         'msg': message['msg'],
+        'timestamp': message['timestamp'],
         'sender': sender}
 
     #keep a buffer of the last 20 messages for new clients who are joining...
@@ -174,7 +176,7 @@ def broadcast_message(message):
 
     else:
         send_message_all(message)
-        
+
 @socketio.on('trd_name_change_event', namespace='/trd')
 def name_change_message(message):
     global clients
