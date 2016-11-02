@@ -69,7 +69,7 @@ def index():
     global client_counter
     global clients
 
-    client_id = int(request.cookies.get('userID', "-1"))
+    client_id = int(request.cookies.get('userIDv2', "-1"))
     if(client_id == -1):
         client_counter += 1
         client_id = client_counter
@@ -89,7 +89,7 @@ def index():
                         users = get_active_users()
                         )
         )
-    resp.set_cookie('userID', str(client_id))
+    resp.set_cookie('userIDv2', str(client_id))
 
     # seems like getting all browsers to refresh the page on e.g. "back" takes a few settings.
     resp.headers['Cache-Control'] = "no-cache, no-store, must-revalidate"
@@ -187,7 +187,7 @@ def name_change_message(message):
     del name_to_client_id_map[clients[message['client_id']]['name']]
     clients[message['client_id']]['name'] = message['name']
     name_to_client_id_map[message['name']] = message['client_id']
-    
+
     print('client ' + str(message['client_id']) + ' is now named: ' + message['name'])
     emit('names_message',
          get_active_users(),
