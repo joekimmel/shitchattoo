@@ -10,6 +10,8 @@ socketio = SocketIO(app, async_mode=None)
 
 messages = deque()
 
+chat_rooms = []
+
 names = [ "anonymous",
           "anon angler",
           "A. Nonny Moose",
@@ -68,6 +70,7 @@ def get_active_users():
 def index():
     global client_counter
     global clients
+    global chat_rooms
 
     client_id = int(request.cookies.get('userIDv2', "-1"))
     if(client_id == -1):
@@ -86,7 +89,8 @@ def index():
         render_template('index.html',
                         messages = messages,
                         client_id = client_id,
-                        users = get_active_users()
+                        users = get_active_users(),
+                        chat_rooms = chat_rooms
                         )
         )
     resp.set_cookie('userIDv2', str(client_id))
@@ -176,6 +180,15 @@ def broadcast_message(message):
 
     else:
         send_message_all(message)
+
+@socketio.on('trd_new_chat_room', namespace='/trd')
+def new_chatroom(message):
+    global chat_rooms
+
+    chat_rooms.append(message['room_name'])
+    emit('new_chat_room', message, broadcast=True)
+
+
 
 @socketio.on('trd_name_change_event', namespace='/trd')
 def name_change_message(message):

@@ -2,8 +2,15 @@
 <html>
 <head>
     <title>Welcome to TrueChat, can I take your order?</title>
-    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script
+       src="https://code.jquery.com/jquery-2.2.4.min.js"
+       integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+       crossorigin="anonymous">
+    </script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
     <script type="text/javascript" charset="utf-8">
 
       var nameChangeHandler;
@@ -52,6 +59,14 @@
              element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
+          socket.on('new_chat_room', function(msg) {
+              var element = $('#rooms_menu');
+              var room_name = msg['room_name'];
+              element.append(
+                  '<li><a href=\"dropdown' + room_name +
+                  '\" data-toggle="tab">' + room_name + '</a></li>');
+          });
+
 
           ////////// outgoing messages
       nameChangeHandler = function(val) {
@@ -67,6 +82,13 @@
                   client_id: my_id});
              $('#broadcast_data').val('');
              return false;
+          });
+
+          $('form#add_chat_room').submit(function(event) {
+              socket.emit('trd_new_chat_room',
+              {room_name: $('#new_chat_room_name').val()});
+              $('#new_chat_room_name').val('');
+              return false;
           });
 
           // scroll the names list to the bottom to start with
@@ -120,7 +142,7 @@
         border-radius: 20px;
         background: #eee;
         padding: 22px;
-        height: 100px;
+        height: 420px;
       }
 
       #ui_container
@@ -156,6 +178,20 @@
     </head>
 <body>
   <h1>Get Chatty</h1>
+  <ul class="nav nav-tabs">
+    <li><a href="#main" data-toggle="tab">Main</a></li>
+    <li class="dropdown">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+        Rooms &nbsp;
+        <b class="caret"></b>
+      </a>
+      <ul class="dropdown-menu" role="menu" id="rooms_menu">
+        {% for room in chat_rooms %}
+          <li><a href="dropdown{{room}}" data-toggle="tab">{{room}}</a></li>
+        {% endfor %}
+      </ul>
+    </li>
+  </ul>
   <div class="flex_parent">
     <div id="ui_container">
       <form id="name" method="POST" action="javascript:void(0)">
@@ -174,6 +210,11 @@
         <input type="text" name="broadcast_data" id="broadcast_data">
         <input type="submit" value="Broadcast">
       </form>
+      <form id="add_chat_room" method="POST" action="javascript:void(0)">
+        Make a new Chat Room!
+        <input type="text" name="new_chat_room_name" id="new_chat_room_name">
+        <input type="submit" value="Create">
+      </form>
     </div> <!-- /ui_container -->
     <div id="user_list_container">
       Look Who's Talking
@@ -186,5 +227,6 @@
       </div>
     </div> <!-- /user_list_container -->
   </div> <!-- / flex_parent -->
+
 </body>
 </html>
