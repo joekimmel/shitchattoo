@@ -172,6 +172,14 @@ def broadcast_message(message):
     global name_to_client_id_map
     global clients
 
+    was_connected = clients.get(request.cookies['userIDv2'], {}).get('connected', True)
+    clients.get(request.cookies['userIDv2'], {})['connected'] = True
+    import pdb; pdb.set_trace()
+    if not was_connected: # if we thought they weren't connected, but they're talking, then have them show up on the users bar.
+        socketio.emit('names_message',
+                      get_active_users(),
+                      namespace='/trd')
+
     if(message['msg'][0] == '@'):
         send_private_message(message)
 
@@ -185,28 +193,29 @@ def change_name():
     global name_to_client_id_map
     global socketio
 
-    #######TODO (this is mostly copypasta and needs to be DRY 'd)
+    #######TODO (this is mostly copypasta and wants to be DRY 'd)
     client_id = int(request.cookies.get('userIDv2', "-1"))
-    if(client_id == -1):
+    if client_id == -1:
         client_counter += 1
         client_id = client_counter
         print ("client_counter is now: %d " % client_counter)
 
-    if (client_id not in clients):
+    if client_id not in clients:
         make_new_client(client_id, '')
 
     old_name = clients[client_id]['name']
     clients[client_id]['name'] = request.json['name']
-    del name_to_client_id_map[old_name]
+    if old_name in name_to_client_id_map:
+        del name_to_client_id_map[old_name]
     name_to_client_id_map[request.json['name']] = client_id
+
+    #if they're reloading the page they may be marked as disconnected at this point
+    clients[client_id]['connected'] = True
 
     print('client ' + str(client_id) + ' is now named: ' + request.json['name'])
     socketio.emit('names_message',
          get_active_users(),
          namespace='/trd')
-
-    #if they're reloading the page they may be marked as disconnected at this point
-    clients[client_id]['connected'] = True
 
     resp = make_response("OK")
     resp.set_cookie('userIDv2', str(client_id))

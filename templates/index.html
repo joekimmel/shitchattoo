@@ -20,6 +20,7 @@
 
           socket.on('connect', function() {
               socket.emit('trd_connect_event', {client_id: my_id});
+              socket.onclose = function () {}; // attempt to prevent superfluous/misleading disconnect events
           });
           socket.on('disconnect', function() {
               socket.emit('trd_disconnect_event', {client_id: my_id})
@@ -27,7 +28,6 @@
 
           window.onbeforeunload = function() {
               socket.emit('trd_disconnect_event', {client_id: my_id})
-              socket.onclose = function () {}; // not sure why we have to disable the socket's close behavior?
               socket.close();
           };
 
