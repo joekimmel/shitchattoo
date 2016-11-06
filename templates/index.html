@@ -50,8 +50,9 @@
               element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
+         //// todo: add room to names message..
           socket.on('names_message', function(msg) {
-              var element = $('div#user_list');
+              var element = $('div#main_user_list');
               element.empty();
               for(client_id in msg) {
                   element.append('<br><span class=\"name\">' + msg[client_id]['name'] + '</span>');
@@ -60,13 +61,29 @@
           });
 
           socket.on('new_chat_room', function(msg) {
-              var element = $('#rooms_menu');
+              var menu_element = $('#rooms_menu');
               var room_name = msg['room_name'];
-              element.append(
-                  '<li><a href=\"dropdown' + room_name +
+              menu_element.append(
+                  '<li><a href=\"#' + room_name +
                   '\" data-toggle="tab">' + room_name + '</a></li>');
+
+          // now we just have to add the html for the chat room..
+          var panes_element = $('#chat_panes_container');
+          panes_element.append(
+      '<div id="' + room_name + '" class="tab-pane fade"><div class="flex_parent">' +
+        '<div id="ui_container">' + room_name +
+          '<div id="' + room_name + '_chat_window" class="vertical_scroller chat_window">' +
+          room_name + '</div></div>' +// <!-- /ui_container -->
+        '<div id="user_list_container">' +
+          '<div id="' + room_name + '_user_list" class="vertical_scroller user_list">' +
+      '</div></div></div></div>');
+
           });
 
+      $('a[data-toggle="tab"]').on('shown', function (e) {
+      //show selected tab / active
+      console.log ( $(e.target).attr('id') );
+      });
 
           ////////// outgoing messages
       nameChangeHandler = function(val) {
@@ -92,11 +109,11 @@
           });
 
           // scroll the names list to the bottom to start with
-          var element = $('div#user_list');
+          var element = $('div#main_user_list');
           element.animate({scrollTop: element[0].scrollHeight}, 500);
 
           //scroll to the bottom of the chat as well.
-      var element = $('#chat_window');
+      var element = $('#main_chat_window');
       element.animate({scrollTop: element[0].scrollHeight}, 500);
 
       });
@@ -126,7 +143,7 @@
 
       .flex_parent
       {
-        display: flex;
+        display: flex !important;
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: space-around;
@@ -170,7 +187,7 @@
         width: 90%;
       }
 
-      #chat_window
+      .chat_window
       {
         display: block;
       }
@@ -179,7 +196,7 @@
 <body>
   <h1>Get Chatty</h1>
   <ul class="nav nav-tabs">
-    <li><a href="#main" data-toggle="tab">Main</a></li>
+    <li><a href="#main_chat" data-toggle="tab">Main</a></li>
     <li class="dropdown">
       <a href="#" class="dropdown-toggle" data-toggle="dropdown">
         Rooms &nbsp;
@@ -187,46 +204,57 @@
       </a>
       <ul class="dropdown-menu" role="menu" id="rooms_menu">
         {% for room in chat_rooms %}
-          <li><a href="dropdown{{room}}" data-toggle="tab">{{room}}</a></li>
+          <li><a href="#{{room}}" data-toggle="tab">{{room}}</a></li>
         {% endfor %}
       </ul>
     </li>
   </ul>
-  <div class="flex_parent">
-    <div id="ui_container">
-      <form id="name" method="POST" action="javascript:void(0)">
-        My Name is: <input type="text" name="name_field" id="name_field" value="{{ users[client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
-      </form>
 
-      <div id="chat_window" class="vertical_scroller">
-        {% for msg in messages %}
-        <br>
-            <span class="timestamp"> {{msg.timestamp}} </span> &nbsp;
-        <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
-        {% endfor %}
-      </div>
 
-      <form id="broadcast" method="POST" action="javascript:void(0)">
-        <input type="text" name="broadcast_data" id="broadcast_data">
-        <input type="submit" value="Broadcast">
-      </form>
-      <form id="add_chat_room" method="POST" action="javascript:void(0)">
-        Make a new Chat Room!
-        <input type="text" name="new_chat_room_name" id="new_chat_room_name">
-        <input type="submit" value="Create">
-      </form>
-    </div> <!-- /ui_container -->
-    <div id="user_list_container">
-      Look Who's Talking
-      <div id="user_list" class="vertical_scroller">
-        {% for cli_id in users %}
-            <br><span class="name">
+  <div id="chat_panes_container" class="tab-content">
+    <div id="main_chat" class="tab-pane fade in active">
+      <div class="flex_parent">
+        <div id="ui_container">
+          <div id="main_chat_window" class="vertical_scroller chat_window">
+            {% for msg in messages %}
+              <br>
+              <span class="timestamp"> {{msg.timestamp}} </span> &nbsp;
+              <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
+            {% endfor %}
+          </div>
+        </div> <!-- /ui_container -->
+        <div id="user_list_container">
+          <div id="main_user_list" class="vertical_scroller user_list">
+            {% for cli_id in users %}
+              <br><span class="name">
               {{users[cli_id]['name'] }}
-            </span>
-        {% endfor %}
-      </div>
-    </div> <!-- /user_list_container -->
-  </div> <!-- / flex_parent -->
+              </span>
+            {% endfor %}
+          </div>
+        </div> <!-- /user_list_container -->
+      </div><!-- / flex_parent  -->
+    </div> <!-- / tab-pane -->
+
+  </div> <!-- / chat panes container -->
+
+
+
+  <div class="additional_ui">
+    <form id="broadcast" method="POST" action="javascript:void(0)">
+      <input type="text" name="broadcast_data" id="broadcast_data">
+      <input type="submit" value="Broadcast">
+    </form>
+    <form id="add_chat_room" method="POST" action="javascript:void(0)">
+      Create Chat Room:
+      <input type="text" name="new_chat_room_name" id="new_chat_room_name">
+      <input type="submit" value="Create">
+    </form>
+    <br/>
+    <form id="name" method="POST" action="javascript:void(0)">
+      My Name is: <input type="text" name="name_field" id="name_field" value="{{ users[client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
+    </form>
+
+</div>
 
 </body>
 </html>
