@@ -191,6 +191,10 @@ def broadcast_message(message):
     else:
         send_message_all(message)
 
+@societio.on('trd_join_room_event', namespace='/trd')
+def client_join_room_event(message):
+    join_room(message['room'])
+
 @socketio.on('trd_new_chat_room', namespace='/trd')
 def new_chatroom(message):
     global chat_rooms
@@ -201,7 +205,6 @@ def new_chatroom(message):
     messages[room] = deque()
     join_room(room)
     emit('new_chat_room', message, broadcast=True)
-
 
 
 @socketio.on('trd_name_change_event', namespace='/trd')

@@ -60,16 +60,10 @@
              element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
-          socket.on('new_chat_room', function(msg) {
-              var menu_element = $('#rooms_menu');
-              var room_name = msg['room_name'];
-              menu_element.append(
-                  '<li><a href=\"#' + room_name +
-                  '\" data-toggle="tab">' + room_name + '</a></li>');
-
-          // now we just have to add the html for the chat room..
-          var panes_element = $('#chat_panes_container');
-          panes_element.append(
+          var join_new_room = function(room_name) {
+              // add the html for the chat room..
+              var panes_element = $('#chat_panes_container');
+              panes_element.append(
       '<div id="' + room_name + '" class="tab-pane fade"><div class="flex_parent">' +
         '<div id="ui_container">' + room_name +
           '<div id="' + room_name + '_chat_window" class="vertical_scroller chat_window">' +
@@ -78,8 +72,21 @@
           '<div id="' + room_name + '_user_list" class="vertical_scroller user_list">' +
       '</div></div></div></div>');
 
-          });
+              // join the room
+              socket.emit('trd_join_room_event', {client_id: my_id, room: room_name});
 
+          };
+
+          socket.on('new_chat_room', function(msg) {
+              var menu_element = $('#rooms_menu');
+              var room_name = msg['room_name'];
+              menu_element.append(
+                  '<li><a href=\"#' + room_name +
+                  '\" data-toggle="tab">' + room_name + '</a></li>');
+             //TODO: bind the <a> click event here as in http://stackoverflow.com/questions/23815899/add-remove-tabs-dynamically-in-bootstrap-make-created-tab-active
+
+          });
+ /// TODO : also bind the <a> click events that load witht he page.
           ////////// outgoing messages
       nameChangeHandler = function(val) {
           socket.emit('trd_name_change_event', {client_id: my_id, name: val});
