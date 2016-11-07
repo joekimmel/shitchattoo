@@ -2,15 +2,15 @@ from collections import deque
 import random
 
 from flask import Flask, render_template, request, make_response
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room #, leave_room
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Burton'
 socketio = SocketIO(app, async_mode=None)
 
-messages = deque()
+messages = {"main": deque()}
 
-chat_rooms = []
+chat_rooms = ["main"]
 
 names = [ "anonymous",
           "anon angler",
@@ -115,6 +115,7 @@ def connect_event(evt):
     clients[evt['client_id']]['connected'] = True
     print("we are running with " + socketio.async_mode)
     print("connect event for client id: "+str(evt['client_id']))
+    join_room('main')
     emit('names_message',
          get_active_users(),
          broadcast=True)
@@ -155,25 +156,34 @@ def send_private_message(message):
 def send_message_all(message):
     sender = message['sender'] if len(message['sender']) > 0 else random.choice(names)
     ensure_client_counter(message['client_id'])
+
+    room = message['room']
     outbound = {
         'msg': message['msg'],
         'timestamp': message['timestamp'],
+        'room': room,
         'sender': sender}
 
     #keep a buffer of the last 20 messages for new clients who are joining...
-    messages.append(outbound)
-    while(len(messages) > 20 ):
-        messages.popleft()
+    messages[room].append(outbound)
+    while(len(messages[room]) > 20 ):
+        messages[room].popleft()
 
+    print("broadcasting message for room: "+room)
     emit('chat_message',
-        outbound,
-        broadcast=True)
+         outbound,
+         room = room)
 
 @socketio.on('trd_broadcast_event', namespace='/trd')
 def broadcast_message(message):
     global messages
     global name_to_client_id_map
     global clients
+
+    join_room(message['room'])
+
+    if(message['msg'] == ""):
+        return
 
     if(message['msg'][0] == '@'):
         send_private_message(message)
@@ -184,8 +194,12 @@ def broadcast_message(message):
 @socketio.on('trd_new_chat_room', namespace='/trd')
 def new_chatroom(message):
     global chat_rooms
+    global messages
 
-    chat_rooms.append(message['room_name'])
+    room = message['room_name']
+    chat_rooms.append(room)
+    messages[room] = deque()
+    join_room(room)
     emit('new_chat_room', message, broadcast=True)
 
 

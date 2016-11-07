@@ -43,7 +43,7 @@
             minute: "numeric" });
 
           socket.on('chat_message', function(msg) {
-              var element = $('#chat_window');
+              var element = $('#' + msg['room'] + '_chat_window');
               element.append('<br> <span class=\"timestamp\">' +
                 dateFormatter.format(new Date(msg['timestamp'])) +
                 '</span>&nbsp;<span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
@@ -80,11 +80,6 @@
 
           });
 
-      $('a[data-toggle="tab"]').on('shown', function (e) {
-      //show selected tab / active
-      console.log ( $(e.target).attr('id') );
-      });
-
           ////////// outgoing messages
       nameChangeHandler = function(val) {
           socket.emit('trd_name_change_event', {client_id: my_id, name: val});
@@ -92,10 +87,12 @@
 
          // emit handler(s)
          $('form#broadcast').submit(function(event) {
+             var activeTab = $('div#chat_panes_container div.active');
              socket.emit('trd_broadcast_event',
                  {msg: $('#broadcast_data').val(),
                   sender: $('#name_field').val(),
                   timestamp: new Date().toString(),
+                  room: activeTab.attr('id'),
                   client_id: my_id});
              $('#broadcast_data').val('');
              return false;
@@ -196,7 +193,6 @@
 <body>
   <h1>Get Chatty</h1>
   <ul class="nav nav-tabs">
-    <li><a href="#main_chat" data-toggle="tab">Main</a></li>
     <li class="dropdown">
       <a href="#" class="dropdown-toggle" data-toggle="dropdown">
         Rooms &nbsp;
@@ -212,11 +208,13 @@
 
 
   <div id="chat_panes_container" class="tab-content">
-    <div id="main_chat" class="tab-pane fade in active">
+    {% for room in chat_rooms %}
+    <div id="{{room}}" class="tab-pane fade {% if room == "main" %} in active{% endif
+  %}">
       <div class="flex_parent">
         <div id="ui_container">
-          <div id="main_chat_window" class="vertical_scroller chat_window">
-            {% for msg in messages %}
+          <div id="{{room}}_chat_window" class="vertical_scroller chat_window">
+            {% for msg in messages[room] %}
               <br>
               <span class="timestamp"> {{msg.timestamp}} </span> &nbsp;
               <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
@@ -224,7 +222,7 @@
           </div>
         </div> <!-- /ui_container -->
         <div id="user_list_container">
-          <div id="main_user_list" class="vertical_scroller user_list">
+          <div id="{{room}}_user_list" class="vertical_scroller user_list">
             {% for cli_id in users %}
               <br><span class="name">
               {{users[cli_id]['name'] }}
@@ -234,7 +232,7 @@
         </div> <!-- /user_list_container -->
       </div><!-- / flex_parent  -->
     </div> <!-- / tab-pane -->
-
+{% endfor %}
   </div> <!-- / chat panes container -->
 
 
