@@ -1,4 +1,4 @@
-from collections import deque
+from collections import deque, defaultdict
 import random
 
 from flask import Flask, render_template, request, make_response
@@ -30,11 +30,13 @@ names = [ "anonymous",
 client_counter = 0
 clients = {}
 name_to_client_id_map = {}
+rooms_to_clients_map = defaultdict(list)
 
 #unclear why we have to do this so often -- clients doesn't persist cleanly ...
 def make_new_client(client_id, room_id = ''):
     global clients
     global name_to_client_id_map
+    global rooms_to_clients_map
 
     new_name = random.choice(names)
     while(new_name in name_to_client_id_map):
@@ -48,6 +50,7 @@ def make_new_client(client_id, room_id = ''):
         }
 
     name_to_client_id_map[new_name] = client_id
+    rooms_to_clients_map['main'].append(client_id)
     ensure_client_counter(client_id)
 
 
@@ -58,11 +61,20 @@ def ensure_client_counter(client_id):
 
 def get_active_users():
     global clients
-    connected_clients = [clients[x] for x in clients if clients[x]['connected']]
+    global rooms_to_clients_map
+
+    #connected_clients = [clients[x] for x in clients if clients[x]['connected']]
 
     ret_clients = {}
-    for cli in connected_clients:
-        ret_clients[cli['id']] = {'id': cli['id'], 'name': cli['name']}
+    for room in rooms_to_clients_map:
+        cli_dict = {}
+        for client_id in rooms_to_clients_map[room]:
+            if clients[client_id]['connected']:
+                cli_dict[client_id] = {'id': client_id, 'name': clients[client_id]['name']}
+        ret_clients[room] = cli_dict
+
+    #for cli in connected_clients:
+    #    ret_clients[cli['id']] = {'id': cli['id'], 'name': cli['name']}
 
     return ret_clients
 
@@ -120,7 +132,8 @@ def connect_event(evt):
          get_active_users(),
          broadcast=True)
 
-@socketio.on('trd_disconnect_event', namespace='/trd')
+# disconnect events do not work; TODO: implement heartbeat/timestamp scheme to detect when clients leave.
+#@socketio.on('trd_disconnect_event', namespace='/trd')
 def disconnect_event(evt):
     global clients
     if(evt['client_id'] not in clients):
@@ -180,20 +193,27 @@ def broadcast_message(message):
     global name_to_client_id_map
     global clients
 
-    join_room(message['room'])
-
     if(message['msg'] == ""):
         return
 
     if(message['msg'][0] == '@'):
         send_private_message(message)
-
     else:
         send_message_all(message)
 
-@societio.on('trd_join_room_event', namespace='/trd')
+@socketio.on('trd_join_room_event', namespace='/trd')
 def client_join_room_event(message):
+    _join_room(message)
+
+def _join_room(message):
+    global rooms_to_clients_map
+
+    rooms_to_clients_map[message['room']].append(message['client_id'])
     join_room(message['room'])
+    emit('names_message',
+         get_active_users(),
+         room=message['room'])
+
 
 @socketio.on('trd_new_chat_room', namespace='/trd')
 def new_chatroom(message):

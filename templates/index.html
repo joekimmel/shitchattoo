@@ -50,31 +50,59 @@
               element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
-         //// todo: add room to names message..
           socket.on('names_message', function(msg) {
-              var element = $('div#main_user_list');
-              element.empty();
-              for(client_id in msg) {
-                  element.append('<br><span class=\"name\">' + msg[client_id]['name'] + '</span>');
-              }
-             element.animate({scrollTop: element[0].scrollHeight}, 500);
+              for(var room in msg) {
+                  if(!msg.hasOwnProperty(room)) continue;
+
+                  var element = $('div#'+room+'_user_list');
+                  if(element.length == 0) continue;
+
+                  element.empty();
+                  for(client_id in msg[room]) {
+                      element.append('<br><span class=\"name\">' + msg[room][client_id]['name'] + '</span>');
+                  }
+                 element.animate({scrollTop: element[0].scrollHeight}, 500);
+             }
           });
 
           var join_new_room = function(room_name) {
-              // add the html for the chat room..
-              var panes_element = $('#chat_panes_container');
-              panes_element.append(
-      '<div id="' + room_name + '" class="tab-pane fade"><div class="flex_parent">' +
-        '<div id="ui_container">' + room_name +
-          '<div id="' + room_name + '_chat_window" class="vertical_scroller chat_window">' +
-          room_name + '</div></div>' +// <!-- /ui_container -->
-        '<div id="user_list_container">' +
-          '<div id="' + room_name + '_user_list" class="vertical_scroller user_list">' +
-      '</div></div></div></div>');
+              if($('a.room_tab[href$="'+room_name+'"]').length == 0) {
+                  // add a tab for the room
+                  $('ul.nav-tabs').append('<li><a href="#' + room_name + '" class="room_tab" data-toggle="tab">'
+                                       + room_name + '</a></li>');
+
+                  // add the html for the chat room..
+                  var panes_element = $('#chat_panes_container');
+                  panes_element.append(
+                  '<div id="' + room_name + '" class="tab-pane fade"><div class="flex_parent">' +
+                  '<div id="ui_container">' + room_name +
+                  '<div id="' + room_name + '_chat_window" class="vertical_scroller chat_window">' +
+                  '<i>Willkommen zu </i>'+ room_name+'</div></div>' +// <!-- /ui_container -->
+                  '<div id="user_list_container">' +
+                  '<div id="' + room_name + '_user_list" class="vertical_scroller user_list">' +
+                  '</div></div></div></div>');
+              } // end if a[href=room_name].length == 0
 
               // join the room
-              socket.emit('trd_join_room_event', {client_id: my_id, room: room_name});
+               socket.emit('trd_join_room_event', {client_id: my_id, room: room_name});
+              var room_tab = $('a.room_tab[href$="'+room_name+'"]');
+              room_tab.click();
 
+              // seems like the active class should be done automagically by the click() fn bt it isnt.
+              room_tab.parents('li').addClass('active');
+              $('.nav-tabs a.dropdown-toggle').parents('li').removeClass('active');
+
+              var chat_window = $('#'+room_name+'_chat_window');
+              chat_window.animate({scrollTop: chat_window[0].scrollHeight}, 500);
+          };
+
+          var bind_room_menu_clicks = function() {
+              $('a.room_menu_item').click(function(e) {
+                  e.preventDefault();
+                  var room_name = e.target.href.substr(e.target.href.indexOf('#')+1);
+                  join_new_room(room_name);
+                  e.preventDefault();
+               });
           };
 
           socket.on('new_chat_room', function(msg) {
@@ -82,11 +110,11 @@
               var room_name = msg['room_name'];
               menu_element.append(
                   '<li><a href=\"#' + room_name +
-                  '\" data-toggle="tab">' + room_name + '</a></li>');
-             //TODO: bind the <a> click event here as in http://stackoverflow.com/questions/23815899/add-remove-tabs-dynamically-in-bootstrap-make-created-tab-active
+                  '\" data-toggle="tab" class="room_menu_item">' + room_name + '</a></li>');
+              bind_room_menu_clicks();
 
           });
- /// TODO : also bind the <a> click events that load witht he page.
+
           ////////// outgoing messages
       nameChangeHandler = function(val) {
           socket.emit('trd_name_change_event', {client_id: my_id, name: val});
@@ -106,20 +134,19 @@
           });
 
           $('form#add_chat_room').submit(function(event) {
+              var room_name = $('#new_chat_room_name').val().replace(/\W/g, '_');
               socket.emit('trd_new_chat_room',
-              {room_name: $('#new_chat_room_name').val()});
+              {room_name: room_name});
+
               $('#new_chat_room_name').val('');
+              $('#broadcast_data').focus();
+              join_new_room(room_name);
               return false;
           });
 
-          // scroll the names list to the bottom to start with
-          var element = $('div#main_user_list');
-          element.animate({scrollTop: element[0].scrollHeight}, 500);
 
-          //scroll to the bottom of the chat as well.
-      var element = $('#main_chat_window');
-      element.animate({scrollTop: element[0].scrollHeight}, 500);
-
+          join_new_room("main");
+          bind_room_menu_clicks();
       });
       </script>
     <style>
@@ -207,7 +234,7 @@
       </a>
       <ul class="dropdown-menu" role="menu" id="rooms_menu">
         {% for room in chat_rooms %}
-          <li><a href="#{{room}}" data-toggle="tab">{{room}}</a></li>
+          <li><a href="#{{room}}" class="room_menu_item" data-toggle="tab">{{room}}</a></li>
         {% endfor %}
       </ul>
     </li>
@@ -215,33 +242,8 @@
 
 
   <div id="chat_panes_container" class="tab-content">
-    {% for room in chat_rooms %}
-    <div id="{{room}}" class="tab-pane fade {% if room == "main" %} in active{% endif
-  %}">
-      <div class="flex_parent">
-        <div id="ui_container">
-          <div id="{{room}}_chat_window" class="vertical_scroller chat_window">
-            {% for msg in messages[room] %}
-              <br>
-              <span class="timestamp"> {{msg.timestamp}} </span> &nbsp;
-              <span class="name"> {{msg.sender}} </span>: {{msg.msg}}
-            {% endfor %}
-          </div>
-        </div> <!-- /ui_container -->
-        <div id="user_list_container">
-          <div id="{{room}}_user_list" class="vertical_scroller user_list">
-            {% for cli_id in users %}
-              <br><span class="name">
-              {{users[cli_id]['name'] }}
-              </span>
-            {% endfor %}
-          </div>
-        </div> <!-- /user_list_container -->
-      </div><!-- / flex_parent  -->
-    </div> <!-- / tab-pane -->
-{% endfor %}
-  </div> <!-- / chat panes container -->
 
+  </div> <!-- / chat panes container -->
 
 
   <div class="additional_ui">
@@ -256,7 +258,7 @@
     </form>
     <br/>
     <form id="name" method="POST" action="javascript:void(0)">
-      My Name is: <input type="text" name="name_field" id="name_field" value="{{ users[client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
+      My Name is: <input type="text" name="name_field" id="name_field" value="{{ users['main'][client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
     </form>
 
 </div>
