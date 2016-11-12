@@ -197,7 +197,7 @@ def broadcast_message(message):
         return
 
     if(message['msg'][0] == '@'):
-        send_private_message(message)
+        pass#send_private_message(message)
     else:
         send_message_all(message)
 
