@@ -86,7 +86,7 @@
                   var panes_element = $('#chat_panes_container');
                   panes_element.append(
                   '<div id="' + room_name + '" class="tab-pane fade"><div class="flex_parent">' +
-                  '<div id="ui_container">' + room_name +
+                  '<div id="ui_container"><div class="room_top_label">' + room_name + '</div>' +
                   '<div id="' + room_name + '_chat_window" class="vertical_scroller chat_window">' +
                   '<i>Willkommen zu </i>'+ room_name+'</div></div>' +// <!-- /ui_container -->
                   '<div id="user_list_container">' +
@@ -219,6 +219,13 @@
 
       }
 
+      .room_top_label
+      {
+        text-align: center;
+        font-size: 130%;
+        color: #666;
+      }
+
       input#name_field
       {
         width: 150px;
@@ -236,7 +243,17 @@
     </style>
     </head>
 <body>
-  <h1>Get Chatty</h1>
+<div class="upper_ui flex_parent">
+    <form id="add_chat_room" method="POST" action="javascript:void(0)">
+      Create Chat Room:
+      <input type="text" name="new_chat_room_name" id="new_chat_room_name">
+      <input type="submit" value="Create">
+    </form>
+    <br/>
+    <form id="name" method="POST" action="javascript:void(0)">
+      My Name is: <input type="text" name="name_field" id="name_field" value="{{ users['main'][client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
+    </form>
+</div>
   <ul class="nav nav-tabs">
     <li class="dropdown">
       <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -257,21 +274,11 @@
   </div> <!-- / chat panes container -->
 
 
-  <div class="additional_ui">
+  <div class="talking_ui">
     <form id="broadcast" method="POST" action="javascript:void(0)">
       <input type="text" name="broadcast_data" id="broadcast_data">
       <input type="submit" value="Broadcast">
     </form>
-    <form id="add_chat_room" method="POST" action="javascript:void(0)">
-      Create Chat Room:
-      <input type="text" name="new_chat_room_name" id="new_chat_room_name">
-      <input type="submit" value="Create">
-    </form>
-    <br/>
-    <form id="name" method="POST" action="javascript:void(0)">
-      My Name is: <input type="text" name="name_field" id="name_field" value="{{ users['main'][client_id]['name'] }}" onchange="nameChangeHandler(this.value)">
-    </form>
-
 </div>
 
 </body>
