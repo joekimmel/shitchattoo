@@ -14,8 +14,15 @@
     <script type="text/javascript" charset="utf-8">
 
       var nameChangeHandler;
+      var unreadMessages = 0;
 
       $(document).ready(function() {
+
+          $(window).on('focus', function() {
+               unreadMessages = 0;
+               document.title = 'TrueChat';
+          });
+
           // single namespace for now
           var namespace = '/trd';
          var my_id;
@@ -47,6 +54,10 @@
               element.append('<br> <span class=\"timestamp\">' +
                 dateFormatter.format(new Date(msg['timestamp'])) +
                 '</span>&nbsp;<span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
+              if(!document.hasFocus()) {
+                 unreadMessages += 1;
+                 document.title = '('+unreadMessages+') TrueChat';
+              }
               element.animate({scrollTop: element[0].scrollHeight}, 500);
           });
 
