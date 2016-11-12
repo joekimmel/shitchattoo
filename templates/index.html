@@ -23,9 +23,14 @@
                document.title = 'TrueChat';
           });
 
+          var getActiveRoomName = function() {
+              return $('div#chat_panes_container div.active').attr('id');
+          };
+
+
           // single namespace for now
           var namespace = '/trd';
-         var my_id;
+          var my_id;
           my_id = {{ client_id }};
           var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
 
@@ -54,11 +59,19 @@
               element.append('<br> <span class=\"timestamp\">' +
                 dateFormatter.format(new Date(msg['timestamp'])) +
                 '</span>&nbsp;<span class=\"name\">' + msg.sender + '</span>: ' + msg.msg );
+              element.animate({scrollTop: element[0].scrollHeight}, 500);
+
               if(!document.hasFocus()) {
                  unreadMessages += 1;
-                 document.title = '('+unreadMessages+') TrueChat';
+                 document.title = '!';
+                 setTimeout(function(){ document.title = '('+unreadMessages+') TrueChat'; }, 600);
               }
-              element.animate({scrollTop: element[0].scrollHeight}, 500);
+
+              if(msg['room'] != getActiveRoomName()){
+                 $('a.room_tab[href$="'+msg['room']+'"]').addClass('unread_messages');
+              }
+
+
           });
 
           socket.on('names_message', function(msg) {
@@ -103,6 +116,11 @@
               room_tab.parents('li').addClass('active');
               $('.nav-tabs a.dropdown-toggle').parents('li').removeClass('active');
 
+              $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
+
+                  $(e.target).removeClass('unread_messages');
+               });
+
               var chat_window = $('#'+room_name+'_chat_window');
               chat_window.animate({scrollTop: chat_window[0].scrollHeight}, 500);
           };
@@ -133,12 +151,12 @@
 
          // emit handler(s)
          $('form#broadcast').submit(function(event) {
-             var activeTab = $('div#chat_panes_container div.active');
+             var activeRoom = getActiveRoomName();
              socket.emit('trd_broadcast_event',
                  {msg: $('#broadcast_data').val(),
                   sender: $('#name_field').val(),
                   timestamp: new Date().toString(),
-                  room: activeTab.attr('id'),
+                  room: activeRoom,
                   client_id: my_id});
              $('#broadcast_data').val('');
              return false;
@@ -217,6 +235,20 @@
       #user_list
       {
 
+      }
+
+      @keyframes unread_animation
+      {
+        0%   {background-color: #fff;}
+        50%  {background-color: #eef;}
+        100% {background-color: #fff;}
+      }
+
+      a.unread_messages
+      {
+        animation-name: unread_animation;
+        animation-duration: 4s;
+        animation-iteration-count: infinite;
       }
 
       .room_top_label
