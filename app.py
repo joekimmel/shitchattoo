@@ -1,8 +1,9 @@
 from collections import deque, defaultdict
+import copy
 from datetime import datetime, timedelta
 import random
 
-from flask import Flask, render_template, request, make_response
+from flask import Flask, render_template, request, make_response, escape
 from flask_socketio import SocketIO, emit, join_room #, leave_room
 
 app = Flask(__name__)
@@ -91,11 +92,10 @@ def ensure_client_counter(client_id):
     if(client_id > client_counter): # happens on server restart
         client_counter = client_id + 1
 
+
 def get_active_users():
     global clients
     global rooms_to_clients_map
-
-    #connected_clients = [clients[x] for x in clients if clients[x]['connected']]
 
     ret_clients = {}
     for room in rooms_to_clients_map:
@@ -105,10 +105,8 @@ def get_active_users():
                 cli_dict[client_id] = {'id': client_id, 'name': clients[client_id]['name']}
         ret_clients[room] = cli_dict
 
-    #for cli in connected_clients:
-    #    ret_clients[cli['id']] = {'id': cli['id'], 'name': cli['name']}
-
     return ret_clients
+
 
 @app.route('/')
 def index():
@@ -124,7 +122,6 @@ def index():
 
     if (client_id not in clients):
         make_new_client(client_id, '')
-
 
     #if they're reloading the page they may be marked as disconnected at this point
     clients[client_id]['connected'] = True
@@ -159,7 +156,6 @@ def connect_event(evt):
         clients[evt['client_id']]['last_contact'] = datetime.now()
 
     clients[evt['client_id']]['connected'] = True
-    print("we are running with " + socketio.async_mode)
     print("connect event for client id: "+str(evt['client_id']))
     join_room('main')
 
@@ -203,7 +199,9 @@ def send_message_all(message):
         'sender': sender}
 
     #keep a buffer of the last 20 messages for new clients who are joining...
-    messages[room].append(outbound)
+    outbound_copy = copy.deepcopy(outbound)
+    outbound_copy['msg'] = escape(outbound['msg'])
+    messages[room].append(outbound_copy)
     while(len(messages[room]) > 20 ):
         messages[room].popleft()
 
@@ -228,7 +226,13 @@ def broadcast_message(message):
 
 @socketio.on('trd_join_room_event', namespace='/trd')
 def client_join_room_event(message):
+    global messages
+
     _join_room(message)
+
+    for msg in messages[message['room']]:
+        emit('chat_message', msg, room=request.sid)
+
 
 def _join_room(message):
     global rooms_to_clients_map
