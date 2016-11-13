@@ -18,6 +18,12 @@
 
       $(document).ready(function() {
 
+          var isSafari = Object.prototype.toString.call(window.HTMLElement).indexOf('Constructor') > 0 || (function (p) { return p.toString() === "[object SafariRemoteNotification]"; })(!window['safari'] || safari.pushNotification);
+          if(isSafari) {
+             alert("This doesn't seem to work in safari, sorry / not sorry.");
+          }
+
+
           var getActiveRoomName = function() {
               return $('div#chat_panes_container div.active').attr('id');
           };
@@ -72,8 +78,6 @@
               if(msg['room'] != getActiveRoomName()){
                 getATagForRoomName(msg['room']).addClass('unread_messages');
               }
-
-
           });
 
           socket.on('names_message', function(msg) {
@@ -103,6 +107,7 @@
                       client_id: my_id});
                   $(this).parent().parent().remove(); // remove li of tab
                   $(tabContentId).remove(); // remove the tab content
+                  getATagForRoomName("main").click();
               });
           }
 
