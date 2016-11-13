@@ -18,15 +18,20 @@
 
       $(document).ready(function() {
 
-          $(window).on('focus', function() {
-               unreadMessages = 0;
-               document.title = 'TrueChat';
-          });
-
           var getActiveRoomName = function() {
               return $('div#chat_panes_container div.active').attr('id');
           };
 
+          var getATagForRoomName = function(room_name) {
+              return $('a.room_tab[href$="' + room_name + '"]');
+          };
+
+          $(window).on('focus', function() {
+               unreadMessages = 0;
+               document.title = 'TrueChat';
+
+               getATagForRoomName(getActiveRoomName()).removeClass('unread_messages');
+          });
 
           // single namespace for now
           var namespace = '/trd';
@@ -68,7 +73,7 @@
               }
 
               if(msg['room'] != getActiveRoomName()){
-                 $('a.room_tab[href$="'+msg['room']+'"]').addClass('unread_messages');
+                getATagForRoomName(msg['room']).addClass('unread_messages');
               }
 
 
@@ -90,7 +95,7 @@
           });
 
           var join_new_room = function(room_name) {
-              if($('a.room_tab[href$="'+room_name+'"]').length == 0) {
+              if(getATagForRoomName(room_name).length == 0) {
                   // add a tab for the room
                   $('ul.nav-tabs').append('<li><a href="#' + room_name + '" class="room_tab" data-toggle="tab">'
                                        + room_name + '</a></li>');
@@ -105,11 +110,11 @@
                   '<div id="user_list_container">' +
                   '<div id="' + room_name + '_user_list" class="vertical_scroller user_list">' +
                   '</div></div></div></div>');
-              } // end if a[href=room_name].length == 0
+              } // end if getATagForRoomName().length == 0
 
               // join the room
                socket.emit('trd_join_room_event', {client_id: my_id, room: room_name});
-              var room_tab = $('a.room_tab[href$="'+room_name+'"]');
+              var room_tab = getATagForRoomName(room_name);
               room_tab.click();
 
               // seems like the active class should be done automagically by the click() fn bt it isnt.
