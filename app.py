@@ -1,4 +1,5 @@
 from collections import deque, defaultdict
+from datetime import datetime, timedelta
 import random
 
 from flask import Flask, render_template, request, make_response
@@ -32,6 +33,36 @@ clients = {}
 name_to_client_id_map = {}
 rooms_to_clients_map = defaultdict(list)
 
+heartbeat_thread = None
+
+
+def heartbeat_pong(msg):
+    global clients
+    clients[msg['client_id']]['last_contact'] = datetime.now()
+
+def heartbeat_ping():
+    global clients
+    sleep_time = 10
+
+    while True:
+        socketio.sleep(sleep_time)
+        now = datetime.now()
+        disconnected_clients = False
+
+        for client_id in clients:
+            if clients[client_id]['last_contact'] < (now - timedelta(seconds=(sleep_time*2))):
+                print("client {} mia / disconnected".format(client_id))
+                clients[client_id]['connected'] = False
+                disconnected_clients = True
+
+        if disconnected_clients:
+            socketio.emit('names_message',
+                          get_active_users(),
+                          broadcast=True,
+                          namespace = '/trd')
+
+        socketio.emit('trd_ping', namespace='/trd', callback=heartbeat_pong)
+
 #unclear why we have to do this so often -- clients doesn't persist cleanly ...
 def make_new_client(client_id, room_id = ''):
     global clients
@@ -46,7 +77,8 @@ def make_new_client(client_id, room_id = ''):
         'name': new_name,
         'id': client_id,
         'connected': True,
-        'room_id': room_id
+        'room_id': room_id,
+        'last_contact': datetime.now()
         }
 
     name_to_client_id_map[new_name] = client_id
@@ -117,30 +149,23 @@ def index():
 @socketio.on('trd_connect_event', namespace='/trd')
 def connect_event(evt):
     global clients
+    global heartbeat_thread
 
     if(evt['client_id'] not in clients):
         print("for some reason we didn't already have the client_id?")
         make_new_client(evt['client_id'], request.sid)
     else:
         clients[evt['client_id']]['room_id'] = request.sid
+        clients[evt['client_id']]['last_contact'] = datetime.now()
 
     clients[evt['client_id']]['connected'] = True
     print("we are running with " + socketio.async_mode)
     print("connect event for client id: "+str(evt['client_id']))
     join_room('main')
-    emit('names_message',
-         get_active_users(),
-         broadcast=True)
 
-# disconnect events do not work; TODO: implement heartbeat/timestamp scheme to detect when clients leave.
-#@socketio.on('trd_disconnect_event', namespace='/trd')
-def disconnect_event(evt):
-    global clients
-    if(evt['client_id'] not in clients):
-        print("for some reason we didn't already have the client_id?")
-        make_new_client(evt['client_id'], request.sid)
-    clients[evt['client_id']]['connected'] = False
-    print("DISconnect event for client id: "+str(evt['client_id']))
+    if heartbeat_thread is None:
+        heartbeat_thread = socketio.start_background_task(target=heartbeat_ping)
+
     emit('names_message',
          get_active_users(),
          broadcast=True)

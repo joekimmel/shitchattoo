@@ -42,9 +42,6 @@
           socket.on('connect', function() {
               socket.emit('trd_connect_event', {client_id: my_id});
           });
-          socket.on('disconnect', function() {
-              socket.emit('trd_disconnect_event', {client_id: my_id})
-          });
 
           window.onbeforeunload = function() {
               socket.emit('trd_disconnect_event', {client_id: my_id})
@@ -92,6 +89,10 @@
                   }
                  element.animate({scrollTop: element[0].scrollHeight}, 500);
              }
+          });
+
+          socket.on('trd_ping', function(msg, callback){
+              callback({client_id: my_id});
           });
 
           var join_new_room = function(room_name) {
