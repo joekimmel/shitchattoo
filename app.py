@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import random
 
 from flask import Flask, render_template, request, make_response, escape
-from flask_socketio import SocketIO, emit, join_room #, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Burton'
@@ -51,7 +51,8 @@ def heartbeat_ping():
         disconnected_clients = False
 
         for client_id in clients:
-            if clients[client_id]['last_contact'] < (now - timedelta(seconds=(sleep_time*2))):
+            if clients[client_id]['connected'] and \
+               clients[client_id]['last_contact'] < (now - timedelta(seconds=(sleep_time*2))):
                 print("client {} mia / disconnected".format(client_id))
                 clients[client_id]['connected'] = False
                 disconnected_clients = True
@@ -234,10 +235,23 @@ def client_join_room_event(message):
         emit('chat_message', msg, room=request.sid)
 
 
+@socketio.on('trd_leave_room_event', namespace='/trd')
+def client_leave_room_event(message):
+    global rooms_to_clients_map
+
+    rooms_to_clients_map[message['room']].remove(message['client_id'])
+    print("client {} leaving room {}".format(message['client_id'], message['room']))
+    leave_room(message['room'])
+    emit('names_message',
+         get_active_users(),
+         room=message['room'])
+
+
 def _join_room(message):
     global rooms_to_clients_map
 
     rooms_to_clients_map[message['room']].append(message['client_id'])
+    print("client {} joins room {}".format(message['client_id'], message['room']))
     join_room(message['room'])
     emit('names_message',
          get_active_users(),

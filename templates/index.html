@@ -95,11 +95,27 @@
               callback({client_id: my_id});
           });
 
+          var registerCloseEvent = function() {
+              $(".closeTab").click(function() {
+                  var tabContentId = $(this).parent().attr("href");
+                  socket.emit('trd_leave_room_event',
+                      {room: tabContentId.substring(1),
+                      client_id: my_id});
+                  $(this).parent().parent().remove(); // remove li of tab
+                  $(tabContentId).remove(); // remove the tab content
+              });
+          }
+
           var join_new_room = function(room_name) {
               if(getATagForRoomName(room_name).length == 0) {
                   // add a tab for the room
-                  $('ul.nav-tabs').append('<li><a href="#' + room_name + '" class="room_tab" data-toggle="tab">'
-                                       + room_name + '</a></li>');
+                  var tab_item = '<li><a href="#' + room_name + '" class="room_tab" data-toggle="tab">' + room_name;
+                  if(room_name != "main") {
+                      tab_item += '&nbsp;<button class="close closeTab" type="button">x</button>&nbsp;';
+                  }
+                  tab_item += '</a></li>';
+                  $('ul.nav-tabs').append(tab_item);
+
 
                   // add the html for the chat room..
                   var panes_element = $('#chat_panes_container');
@@ -123,9 +139,10 @@
               $('.nav-tabs a.dropdown-toggle').parents('li').removeClass('active');
 
               $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
-
                   $(e.target).removeClass('unread_messages');
                });
+
+               registerCloseEvent();
 
               var chat_window = $('#'+room_name+'_chat_window');
               chat_window.animate({scrollTop: chat_window[0].scrollHeight}, 500);
@@ -262,6 +279,11 @@
         text-align: center;
         font-size: 130%;
         color: #666;
+      }
+
+      button.closeTab
+      {
+        font-size: 130%;
       }
 
       input#name_field
