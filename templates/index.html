@@ -80,6 +80,14 @@
               }
           });
 
+          socket.on('admin_message', function(msg) {
+             var element = $('#' + msg['room'] + '_chat_window');
+              element.append('<br> <span class=\"timestamp\">' +
+                dateFormatter.format(new Date()) +
+                '</span>&nbsp;<span class="admin_message"> ' + msg.msg + '</span>' );
+              element.animate({scrollTop: element[0].scrollHeight}, 500);
+          });
+
           socket.on('names_message', function(msg) {
               for(var room in msg) {
                   if(!msg.hasOwnProperty(room)) continue;
@@ -193,7 +201,7 @@
           $('form#add_chat_room').submit(function(event) {
               var room_name = $('#new_chat_room_name').val().replace(/\W/g, '_');
               socket.emit('trd_new_chat_room',
-              {room_name: room_name});
+              {room_name: room_name, client_id: my_id});
 
               $('#new_chat_room_name').val('');
               $('#broadcast_data').focus();
@@ -227,6 +235,12 @@
       {
         font-size: 70%;
         color: #777;
+      }
+
+      span.admin_message
+      {
+        font-size: 85%;
+        font-style: italic;
       }
 
       .flex_parent

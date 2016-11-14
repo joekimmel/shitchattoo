@@ -43,7 +43,7 @@ def heartbeat_pong(msg):
 
 def heartbeat_ping():
     global clients
-    sleep_time = 10
+    sleep_time = 8
 
     while True:
         socketio.sleep(sleep_time)
@@ -54,6 +54,12 @@ def heartbeat_ping():
             if clients[client_id]['connected'] and \
                clients[client_id]['last_contact'] < (now - timedelta(seconds=(sleep_time*2))):
                 print("client {} mia / disconnected".format(client_id))
+                socketio.emit('admin_message',
+                              {'room': "main",
+                               'msg': "{} seems to have disconnected".format(clients[client_id]['name'])},
+                              broadcast=True,
+                              room='main',
+                              namespace="/trd")
                 clients[client_id]['connected'] = False
                 disconnected_clients = True
 
@@ -228,11 +234,18 @@ def broadcast_message(message):
 @socketio.on('trd_join_room_event', namespace='/trd')
 def client_join_room_event(message):
     global messages
+    global clients
 
     _join_room(message)
 
     for msg in messages[message['room']]:
         emit('chat_message', msg, room=request.sid)
+
+    emit('admin_message',
+         {'room': message['room'],
+          'msg': "{} enters the room".format(clients[message['client_id']]['name'])},
+         broadcast=True,
+         room=message['room'])
 
 
 @socketio.on('trd_leave_room_event', namespace='/trd')
@@ -244,6 +257,12 @@ def client_leave_room_event(message):
     leave_room(message['room'])
     emit('names_message',
          get_active_users(),
+         room=message['room'])
+
+    emit('admin_message',
+         {'room': message['room'],
+          'msg': "{} exits the room".format(clients[message['client_id']]['name'])},
+         broadcast=True,
          room=message['room'])
 
 
@@ -269,6 +288,12 @@ def new_chatroom(message):
     join_room(room)
     emit('new_chat_room', message, broadcast=True)
 
+    emit('admin_message',
+         {'room': "main",
+          'msg': "{} created new room: {}".format(clients[message['client_id']]['name'], message['room_name'])},
+         broadcast=True,
+         room='main')
+
 
 @socketio.on('trd_name_change_event', namespace='/trd')
 def name_change_message(message):
@@ -276,6 +301,8 @@ def name_change_message(message):
     global name_to_client_id_map
 
     ensure_client_counter(message['client_id'])
+
+    old_name =  clients[message['client_id']]['name']
 
     del name_to_client_id_map[clients[message['client_id']]['name']]
     clients[message['client_id']]['name'] = message['name']
@@ -285,6 +312,12 @@ def name_change_message(message):
     emit('names_message',
          get_active_users(),
          broadcast=True)
+
+    emit('admin_message',
+         {'room': "main",
+          'msg': "{} is now named {}".format(old_name, clients[message['client_id']]['name'])},
+         broadcast=True,
+         room='main')
 
 
 if __name__ == '__main__':
