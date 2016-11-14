@@ -187,6 +187,10 @@
 
          // emit handler(s)
          $('form#broadcast').submit(function(event) {
+             if($('#broadcast_data').val()[0] == '@'){
+              alert("hey right now there's no private messages and the server will silently drop anything that starts with an @");
+              return false;
+             }
              var activeRoom = getActiveRoomName();
              socket.emit('trd_broadcast_event',
                  {msg: $('#broadcast_data').val(),
